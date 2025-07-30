@@ -1,7 +1,5 @@
-package com.dfs;
+package com.dfs.data;
 
-import com.dfs.data.DatabaseAccess;
-import com.dfs.data.EntityNotFoundException;
 import com.dfs.models.UserModel;
 import com.dfs.models.TaskModel;
 import com.dfs.models.DatedTaskModel;
@@ -13,11 +11,11 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Scanner;
 
-public class TaskManager {
+public class TaskService {
     private final DatabaseAccess database;
     private final UserModel currentUser;
     
-    public TaskManager(UserModel user) {
+    public TaskService(UserModel user) {
         this.database = DatabaseAccess.getInstance();
         this.currentUser = user;
     }
@@ -78,8 +76,10 @@ public class TaskManager {
         }
         
         System.out.println("Liste de toutes les tâches :");
-        for (int i = 0; i < tasks.size(); i++) {
-            System.out.println((i + 1) + ". " + tasks.get(i));
+        int i = 1;
+        for (TaskModel task : tasks) {
+            System.out.println(i + ". " + task);
+            i++;
         }
     }
     
@@ -92,8 +92,10 @@ public class TaskManager {
             }
             
             System.out.println("Vos tâches :");
-            for (int i = 0; i < tasks.size(); i++) {
-                System.out.println((i + 1) + ". " + tasks.get(i));
+            int i = 1;
+            for (TaskModel task : tasks) {
+                System.out.println(i + ". " + task);
+                i++;
             }
         } catch (EntityNotFoundException e) {
             System.out.println("Erreur : " + e.getMessage());
