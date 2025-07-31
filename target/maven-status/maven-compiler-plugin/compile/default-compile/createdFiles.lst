@@ -7,5 +7,6 @@ com/dfs/server/TemplateManager.class
 com/dfs/models/TaskBuilder.class
 com/dfs/models/DatedTaskModel.class
 com/dfs/server/HttpResponse.class
+com/dfs/service/ConfigService.class
 com/dfs/models/UserModel.class
 com/dfs/server/TodoServer.class

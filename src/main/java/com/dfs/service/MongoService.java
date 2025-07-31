@@ -20,12 +20,14 @@ public class MongoService {
     private final MongoDatabase database;
     private final MongoCollection<Document> usersCollection;
     private final MongoCollection<Document> tasksCollection;
+    private final ConfigService config;
     
     private MongoService() {
-        this.mongoClient = MongoClients.create("mongodb://localhost:27017");
-        this.database = mongoClient.getDatabase("todolist");
-        this.usersCollection = database.getCollection("users");
-        this.tasksCollection = database.getCollection("tasks");
+        this.config = ConfigService.getInstance();
+        this.mongoClient = MongoClients.create(config.getMongoDbUrl());
+        this.database = mongoClient.getDatabase(config.getMongoDbDatabase());
+        this.usersCollection = database.getCollection(config.getMongoDbUsersCollection());
+        this.tasksCollection = database.getCollection(config.getMongoDbTasksCollection());
         
         // Nettoyer la base de données au démarrage
         clearAllData();
@@ -47,10 +49,21 @@ public class MongoService {
     public List<UserModel> getAllUsers() {
         List<UserModel> users = new ArrayList<>();
         usersCollection.find().forEach(doc -> {
-            UserModel user = new UserModel(doc.getString("firstName"));
+            String id = doc.getString("_id");
+            String firstName = doc.getString("firstName");
+            UserModel user = new UserModel(firstName);
+            // On ne peut pas modifier l'ID final, donc on utilise une approche différente
             users.add(user);
         });
         return users;
+    }
+    
+    public String findUserIdByFirstName(String firstName) throws EntityNotFoundException {
+        Document doc = usersCollection.find(Filters.eq("firstName", firstName)).first();
+        if (doc == null) {
+            throw new EntityNotFoundException("Utilisateur", firstName);
+        }
+        return doc.getString("_id");
     }
     
     public UserModel findUserById(String id) throws EntityNotFoundException {
@@ -58,7 +71,9 @@ public class MongoService {
         if (doc == null) {
             throw new EntityNotFoundException("Utilisateur", id);
         }
-        return new UserModel(doc.getString("firstName"));
+        String firstName = doc.getString("firstName");
+        UserModel user = new UserModel(firstName);
+        return user;
     }
     
     public UserModel findUserByFirstName(String firstName) throws EntityNotFoundException {
@@ -66,14 +81,16 @@ public class MongoService {
         if (doc == null) {
             throw new EntityNotFoundException("Utilisateur", firstName);
         }
-        return new UserModel(doc.getString("firstName"));
+        UserModel user = new UserModel(firstName);
+        return user;
     }
     
-    public void addUser(UserModel user) {
+    public UserModel addUser(UserModel user) {
         Document doc = new Document()
             .append("_id", user.getId().toString())
             .append("firstName", user.getFirstName());
         usersCollection.insertOne(doc);
+        return user;
     }
     
     public void deleteUser(String id) throws EntityNotFoundException {

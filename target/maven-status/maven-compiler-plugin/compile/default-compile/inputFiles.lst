@@ -4,6 +4,7 @@
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/ServerMain.java
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/models/TaskBuilder.java
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/models/TaskModel.java
+/Users/julien/programation/Java/todolist/src/main/java/com/dfs/service/ConfigService.java
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/server/HttpRequest.java
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/service/MongoService.java
 /Users/julien/programation/Java/todolist/src/main/java/com/dfs/server/TemplateManager.java

@@ -153,8 +153,15 @@ public class TodoServer {
         StringBuilder usersOptions = new StringBuilder();
         
         for (UserModel user : users) {
-            usersOptions.append("<option value=\"").append(user.getId().toString()).append("\">")
-                .append(user.getFirstName()).append("</option>");
+            // Récupérer l'ID réel de l'utilisateur depuis la base de données
+            try {
+                String userId = database.findUserIdByFirstName(user.getFirstName());
+                usersOptions.append("<option value=\"").append(userId).append("\">")
+                    .append(user.getFirstName()).append("</option>");
+            } catch (EntityNotFoundException e) {
+                // Ignorer les utilisateurs non trouvés
+                continue;
+            }
         }
         
         String html = TemplateManager.renderAddTaskTemplate(usersOptions.toString());
@@ -268,6 +275,7 @@ public class TodoServer {
                 return HttpResponse.error("Paramètres manquants");
             }
             
+            // Récupérer l'utilisateur par son ID
             UserModel user = database.findUserById(createdBy);
             TaskModel task;
             
@@ -325,7 +333,7 @@ public class TodoServer {
             }
             
             UserModel user = new UserModel(firstName);
-            database.addUser(user);
+            UserModel createdUser = database.addUser(user);
             return HttpResponse.ok("""
                 <!DOCTYPE html>
                 <html>
