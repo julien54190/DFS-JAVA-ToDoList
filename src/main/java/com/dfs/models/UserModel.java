@@ -11,20 +11,12 @@ public class UserModel {
         this.firstName = firstName;
     }
     
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
     
-    public String getFirstName() {
-        return firstName;
-    }
+    public String getFirstName() { return firstName; }
     
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
     
     @Override
-    public String toString() {
-        return "UserModel{id=" + id + ", firstName='" + firstName + "'}";
-    }
+    public String toString() { return "UserModel{id=" + id + ", firstName='" + firstName + "'}"; }
 } 

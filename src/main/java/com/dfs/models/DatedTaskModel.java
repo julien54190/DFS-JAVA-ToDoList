@@ -11,21 +11,13 @@ public class DatedTaskModel extends TaskModel {
         this.dueDate = dueDate;
     }
     
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
+    public LocalDate getDueDate() { return dueDate; }
     
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
-    }
+    public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
     
-    public boolean isOverdue() {
-        return !isDone() && LocalDate.now().isAfter(dueDate);
-    }
+    public boolean isOverdue() { return !isDone() && LocalDate.now().isAfter(dueDate); }
     
-    public boolean isDueToday() {
-        return LocalDate.now().equals(dueDate);
-    }
+    public boolean isDueToday() { return LocalDate.now().equals(dueDate); }
     
     @Override
     public String toString() {

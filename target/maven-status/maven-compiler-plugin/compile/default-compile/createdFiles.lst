@@ -1,0 +1,11 @@
+com/dfs/server/HttpRequest.class
+com/dfs/service/EntityNotFoundException.class
+com/dfs/service/MongoService.class
+com/dfs/models/TaskModel.class
+com/dfs/ServerMain.class
+com/dfs/server/TemplateManager.class
+com/dfs/models/TaskBuilder.class
+com/dfs/models/DatedTaskModel.class
+com/dfs/server/HttpResponse.class
+com/dfs/models/UserModel.class
+com/dfs/server/TodoServer.class

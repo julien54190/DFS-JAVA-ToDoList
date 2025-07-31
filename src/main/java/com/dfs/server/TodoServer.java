@@ -1,21 +1,28 @@
 package com.dfs.server;
 
-import com.dfs.data.DatabaseAccess;
-import com.dfs.models.TaskModel;
+import com.dfs.service.MongoService;
+import com.dfs.service.EntityNotFoundException;
 import com.dfs.models.UserModel;
+import com.dfs.models.TaskModel;
+import com.dfs.models.DatedTaskModel;
+import com.dfs.models.TaskBuilder;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
+import java.util.UUID;
 
 public class TodoServer {
     private final int port;
-    private final DatabaseAccess database;
+    private final MongoService database;
     
     public TodoServer(int port) {
         this.port = port;
-        this.database = DatabaseAccess.getInstance();
+        this.database = MongoService.getInstance();
     }
     
     public void start() {
@@ -63,8 +70,12 @@ public class TodoServer {
         return switch (path) {
             case "/" -> getHomePage();
             case "/tasks" -> getTasksPage();
+            case "/users" -> getUsersPage();
+            case "/add-task" -> getAddTaskPage();
+            case "/add-user" -> getAddUserPage();
             case "/api/tasks" -> getTasksJson();
             case "/api/users" -> getUsersJson();
+            case "/static/style.css" -> getCssFile();
             default -> HttpResponse.notFound();
         };
     }
@@ -72,70 +83,35 @@ public class TodoServer {
     private HttpResponse handlePostRequest(String path, HttpRequest request) {
         return switch (path) {
             case "/api/tasks" -> createTask(request);
+            case "/api/users" -> createUser(request);
+            case "/add-task" -> createTaskFromForm(request);
+            case "/add-user" -> createUserFromForm(request);
             default -> HttpResponse.notFound();
         };
     }
     
+    private HttpResponse getCssFile() {
+        try {
+            String css = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get("src/main/resources/static/style.css")));
+            return HttpResponse.css(css);
+        } catch (Exception e) {
+            return HttpResponse.notFound();
+        }
+    }
+    
     private HttpResponse getHomePage() {
-        String html = """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>TODO List</title>
-                <meta charset="UTF-8">
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; }
-                    .container { max-width: 800px; margin: 0 auto; }
-                    .task { border: 1px solid #ddd; padding: 10px; margin: 10px 0; border-radius: 5px; }
-                    .done { background-color: #e8f5e8; }
-                    .overdue { border-color: #ff6b6b; }
-                    .today { border-color: #ffd93d; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>📝 TODO List</h1>
-                    <p>Bienvenue dans votre gestionnaire de tâches !</p>
-                    <p><a href="/tasks">Voir toutes les tâches</a></p>
-                    <p><a href="/api/tasks">API - Tâches (JSON)</a></p>
-                    <p><a href="/api/users">API - Utilisateurs (JSON)</a></p>
-                </div>
-            </body>
-            </html>
-            """;
+        String html = TemplateManager.loadTemplate("home");
         return HttpResponse.ok(html);
     }
     
     private HttpResponse getTasksPage() {
         List<TaskModel> tasks = database.getAllTasks();
-        StringBuilder html = new StringBuilder();
-        html.append("""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Tâches - TODO List</title>
-                <meta charset="UTF-8">
-                <style>
-                    body { font-family: Arial, sans-serif; margin: 40px; }
-                    .container { max-width: 800px; margin: 0 auto; }
-                    .task { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
-                    .done { background-color: #e8f5e8; }
-                    .overdue { border-color: #ff6b6b; }
-                    .today { border-color: #ffd93d; }
-                    .status { font-weight: bold; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>📋 Liste des tâches</h1>
-                    <p><a href="/">← Retour à l'accueil</a></p>
-            """);
-        
-        for (TaskModel task : tasks) {
+        List<String> tasksHtml = tasks.stream().map(task -> {
             String status = task.isDone() ? "✅ Terminée" : "☐ À faire";
             String cssClass = task.isDone() ? "task done" : "task";
             
-            if (task instanceof com.dfs.models.DatedTaskModel datedTask) {
+            if (task instanceof DatedTaskModel datedTask) {
                 if (datedTask.isOverdue()) {
                     cssClass += " overdue";
                 } else if (datedTask.isDueToday()) {
@@ -143,21 +119,51 @@ public class TodoServer {
                 }
             }
             
+            StringBuilder html = new StringBuilder();
             html.append("<div class=\"").append(cssClass).append("\">");
             html.append("<div class=\"status\">").append(status).append("</div>");
             html.append("<h3>").append(task.getTitle()).append("</h3>");
             html.append("<p>").append(task.getDescription()).append("</p>");
             html.append("<small>Par : ").append(task.getCreatedBy().getFirstName()).append("</small>");
             
-            if (task instanceof com.dfs.models.DatedTaskModel datedTask) {
+            if (task instanceof DatedTaskModel datedTask) {
                 html.append("<br><small>Échéance : ").append(datedTask.getDueDate()).append("</small>");
             }
             
             html.append("</div>");
+            return html.toString();
+        }).toList();
+        
+        String html = TemplateManager.renderTasksTemplate(tasksHtml);
+        return HttpResponse.ok(html);
+    }
+    
+    private HttpResponse getUsersPage() {
+        List<UserModel> users = database.getAllUsers();
+        List<String> usersHtml = users.stream().map(user -> {
+            return "<div class=\"user\"><h3>" + user.getFirstName() + "</h3><p>ID: " + user.getId() + "</p></div>";
+        }).toList();
+        
+        String html = TemplateManager.renderUsersTemplate(usersHtml);
+        return HttpResponse.ok(html);
+    }
+    
+    private HttpResponse getAddTaskPage() {
+        List<UserModel> users = database.getAllUsers();
+        StringBuilder usersOptions = new StringBuilder();
+        
+        for (UserModel user : users) {
+            usersOptions.append("<option value=\"").append(user.getId().toString()).append("\">")
+                .append(user.getFirstName()).append("</option>");
         }
         
-        html.append("</div></body></html>");
-        return HttpResponse.ok(html.toString());
+        String html = TemplateManager.renderAddTaskTemplate(usersOptions.toString());
+        return HttpResponse.ok(html);
+    }
+    
+    private HttpResponse getAddUserPage() {
+        String html = TemplateManager.loadTemplate("add-user");
+        return HttpResponse.ok(html);
     }
     
     private HttpResponse getTasksJson() {
@@ -175,7 +181,7 @@ public class TodoServer {
             json.append("\"done\":").append(task.isDone()).append(",");
             json.append("\"createdBy\":\"").append(task.getCreatedBy().getFirstName()).append("\"");
             
-            if (task instanceof com.dfs.models.DatedTaskModel datedTask) {
+            if (task instanceof DatedTaskModel datedTask) {
                 json.append(",\"dueDate\":\"").append(datedTask.getDueDate()).append("\"");
             }
             
@@ -217,8 +223,8 @@ public class TodoServer {
                 return HttpResponse.error("Paramètres manquants");
             }
             
-            UserModel user = database.findUserById(java.util.UUID.fromString(userId));
-            TaskModel task = new com.dfs.models.TaskBuilder()
+            UserModel user = database.findUserById(userId);
+            TaskModel task = new TaskBuilder()
                     .title(title)
                     .description(description)
                     .createdBy(user)
@@ -226,6 +232,121 @@ public class TodoServer {
             
             database.addTask(task);
             return HttpResponse.json("{\"success\":true,\"message\":\"Tâche créée\"}");
+            
+        } catch (Exception e) {
+            return HttpResponse.error("Erreur lors de la création : " + e.getMessage());
+        }
+    }
+    
+    private HttpResponse createUser(HttpRequest request) {
+        try {
+            String body = request.getBody();
+            String firstName = extractParameter(body, "firstName");
+            
+            if (firstName == null) {
+                return HttpResponse.error("Paramètre firstName manquant");
+            }
+            
+            UserModel user = new UserModel(firstName);
+            database.addUser(user);
+            return HttpResponse.json("{\"success\":true,\"message\":\"Utilisateur créé\"}");
+            
+        } catch (Exception e) {
+            return HttpResponse.error("Erreur lors de la création : " + e.getMessage());
+        }
+    }
+    
+    private HttpResponse createTaskFromForm(HttpRequest request) {
+        try {
+            String body = request.getBody();
+            String title = extractParameter(body, "title");
+            String description = extractParameter(body, "description");
+            String createdBy = extractParameter(body, "createdBy");
+            String dueDate = extractParameter(body, "dueDate");
+            
+            if (title == null || description == null || createdBy == null) {
+                return HttpResponse.error("Paramètres manquants");
+            }
+            
+            UserModel user = database.findUserById(createdBy);
+            TaskModel task;
+            
+            if (dueDate != null && !dueDate.isEmpty()) {
+                LocalDate localDueDate = LocalDate.parse(dueDate);
+                task = new TaskBuilder()
+                        .title(title)
+                        .description(description)
+                        .createdBy(user)
+                        .dueDate(localDueDate)
+                        .buildDatedTask();
+            } else {
+                task = new TaskBuilder()
+                        .title(title)
+                        .description(description)
+                        .createdBy(user)
+                        .build();
+            }
+            
+            database.addTask(task);
+            return HttpResponse.ok("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Tâche créée - TODO List</title>
+                    <meta charset="UTF-8">
+                    <link rel="stylesheet" href="/static/style.css">
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>✅ Tâche créée avec succès !</h1>
+                        <div class="success">
+                            <p>La tâche <strong>%s</strong> a été ajoutée.</p>
+                        </div>
+                        <p><a href="/tasks">Voir toutes les tâches</a></p>
+                        <p><a href="/add-task">Ajouter une autre tâche</a></p>
+                        <p><a href="/">Retour à l'accueil</a></p>
+                    </div>
+                </body>
+                </html>
+                """.formatted(title));
+            
+        } catch (Exception e) {
+            return HttpResponse.error("Erreur lors de la création : " + e.getMessage());
+        }
+    }
+    
+    private HttpResponse createUserFromForm(HttpRequest request) {
+        try {
+            String body = request.getBody();
+            String firstName = extractParameter(body, "firstName");
+            
+            if (firstName == null) {
+                return HttpResponse.error("Paramètre firstName manquant");
+            }
+            
+            UserModel user = new UserModel(firstName);
+            database.addUser(user);
+            return HttpResponse.ok("""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Utilisateur créé - TODO List</title>
+                    <meta charset="UTF-8">
+                    <link rel="stylesheet" href="/static/style.css">
+                </head>
+                <body>
+                    <div class="container">
+                        <h1>✅ Utilisateur créé avec succès !</h1>
+                        <div class="success">
+                            <p>L'utilisateur <strong>%s</strong> a été ajouté.</p>
+                        </div>
+                        <p><a href="/users">Voir tous les utilisateurs</a></p>
+                        <p><a href="/add-user">Ajouter un autre utilisateur</a></p>
+                        <p><a href="/">Retour à l'accueil</a></p>
+                    </div>
+                </body>
+                </html>
+                """.formatted(firstName));
             
         } catch (Exception e) {
             return HttpResponse.error("Erreur lors de la création : " + e.getMessage());

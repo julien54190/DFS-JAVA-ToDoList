@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ajouter une tâche - TODO List</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>➕ Ajouter une tâche</h1>
+        <div class="nav">
+            <a href="/">Accueil</a>
+            <a href="/tasks">Tâches</a>
+            <a href="/users">Utilisateurs</a>
+            <a href="/add-task">Ajouter une tâche</a>
+            <a href="/add-user">Ajouter un utilisateur</a>
+        </div>
+        <form method="POST" action="/add-task">
+            <div class="form-group">
+                <label for="title">Titre :</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description :</label>
+                <textarea id="description" name="description" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="createdBy">Créé par :</label>
+                <select id="createdBy" name="createdBy" required>
+                    {{USERS_OPTIONS}}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="dueDate">Date d'échéance (optionnel) :</label>
+                <input type="date" id="dueDate" name="dueDate">
+            </div>
+            <button type="submit" class="btn">Ajouter la tâche</button>
+        </form>
+    </div>
+</body>
+</html> 

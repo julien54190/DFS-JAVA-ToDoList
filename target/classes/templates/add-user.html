@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ajouter un utilisateur - TODO List</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>👤 Ajouter un utilisateur</h1>
+        <div class="nav">
+            <a href="/">Accueil</a>
+            <a href="/tasks">Tâches</a>
+            <a href="/users">Utilisateurs</a>
+            <a href="/add-task">Ajouter une tâche</a>
+            <a href="/add-user">Ajouter un utilisateur</a>
+        </div>
+        <form method="POST" action="/add-user">
+            <div class="form-group">
+                <label for="firstName">Prénom :</label>
+                <input type="text" id="firstName" name="firstName" required>
+            </div>
+            <button type="submit" class="btn">Ajouter l'utilisateur</button>
+        </form>
+    </div>
+</body>
+</html> 
