@@ -26,6 +26,9 @@ public class MongoService {
         this.database = mongoClient.getDatabase("todolist");
         this.usersCollection = database.getCollection("users");
         this.tasksCollection = database.getCollection("tasks");
+        
+        // Nettoyer la base de données au démarrage
+        clearAllData();
     }
     
     public static synchronized MongoService getInstance() {
@@ -33,6 +36,12 @@ public class MongoService {
             instance = new MongoService();
         }
         return instance;
+    }
+    
+    private void clearAllData() {
+        usersCollection.deleteMany(new Document());
+        tasksCollection.deleteMany(new Document());
+        System.out.println("✅ Base de données nettoyée au démarrage");
     }
     
     public List<UserModel> getAllUsers() {
